@@ -2,6 +2,7 @@ package dproc.logic;
 
 import arc.scene.ui.layout.*;
 import arc.struct.*;
+import arc.util.io.*;
 import dproc.*;
 import mindustry.*;
 import mindustry.gen.*;
@@ -105,6 +106,27 @@ public class DebugLogicBlock extends LogicBlock{
                     accumulator --;
                 }
             }
+        }
+
+        @Override
+        public void read(Reads read, byte revision){
+            super.read(read, revision);
+
+            if(revision >= 1){
+                auto = read.bool();
+            }
+        }
+
+        @Override
+        public void write(Writes write){
+            super.write(write);
+
+            write.bool(auto);
+        }
+
+        @Override
+        public byte version(){
+            return 1;
         }
     }
 }
