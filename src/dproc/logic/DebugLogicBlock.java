@@ -25,7 +25,7 @@ public class DebugLogicBlock extends LogicBlock{
 
             table.button(Icon.settings, Styles.clearTransi, () -> {
                 DProc.debug.show(code, executor, this);
-            }).size(40);
+            }).size(40).disabled(b -> !executor.initialized());
         }
 
         @Override
