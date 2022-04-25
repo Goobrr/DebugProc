@@ -1,9 +1,7 @@
 package dproc.logic.ui;
 
 import arc.*;
-import arc.graphics.*;
 import arc.math.*;
-import arc.scene.*;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
@@ -25,7 +23,6 @@ public class LogicDebugDialog extends BaseDialog{
 
     private Table codeTable;
     private Table varsTable;
-    private int oldVarsLength;
 
     public LogicDebugDialog(){
         super(Core.bundle.get("ui.debug.title"));

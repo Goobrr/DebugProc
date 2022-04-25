@@ -10,7 +10,6 @@ import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.scene.ui.Label.*;
 import arc.struct.*;
-import arc.util.*;
 import mindustry.*;
 
 public class DebugStyles{
