@@ -55,10 +55,6 @@ public class LogicDebugDialog extends BaseDialog{
                         inst.setStyle(DebugStyles.code);
                     }).top().left().grow().pad(5);
 
-                    b.button(Icon.logic, this::resetExecutor)
-                    .top().right().pad(5)
-                    .size(40).tooltip(Core.bundle.get("ui.debug.reset"));
-
                     b.button(Icon.down, () -> {
                         executor.runOnce();
                         build.auto = false;
@@ -68,6 +64,10 @@ public class LogicDebugDialog extends BaseDialog{
                         executor.var(0).numval -= 1;
                         build.auto = false;
                     }).top().right().pad(5).size(40).tooltip(Core.bundle.get("ui.debug.prev"));
+
+                    b.button(Icon.rotate, this::resetExecutor)
+                    .top().right().pad(5)
+                    .size(40).tooltip(Core.bundle.get("ui.debug.reset"));
 
                     b.button(Icon.logic, () -> build.auto = !build.auto)
                         .top().right().pad(5)
