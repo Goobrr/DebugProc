@@ -2,6 +2,7 @@ package dproc.logic;
 
 import arc.scene.ui.layout.*;
 import arc.struct.*;
+import arc.util.*;
 import arc.util.io.*;
 import dproc.*;
 import mindustry.*;
@@ -16,6 +17,7 @@ public class DebugLogicBlock extends LogicBlock{
 
     public class DebugLogicBuild extends LogicBuild {
         public boolean auto = false;
+        public IntSeq breakpoints = new IntSeq();
 
         @Override
         public void buildConfiguration(Table table){
@@ -114,6 +116,11 @@ public class DebugLogicBlock extends LogicBlock{
 
             if(revision >= 1){
                 auto = read.bool();
+
+                int len = read.i();
+                for(int i = 0; i < len; i++){
+                    breakpoints.add(read.i());
+                }
             }
         }
 
@@ -122,6 +129,11 @@ public class DebugLogicBlock extends LogicBlock{
             super.write(write);
 
             write.bool(auto);
+
+            write.i(breakpoints.size);
+            for(int i = 0; i < breakpoints.size; i++){
+                write.i(breakpoints.get(i));
+            }
         }
 
         @Override

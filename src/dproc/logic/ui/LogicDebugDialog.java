@@ -2,6 +2,7 @@ package dproc.logic.ui;
 
 import arc.*;
 import arc.math.*;
+import arc.scene.*;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
@@ -23,6 +24,9 @@ public class LogicDebugDialog extends BaseDialog{
 
     private Table codeTable;
     private Table varsTable;
+    private Table bpTable;
+
+    private int newBreakpoint = 0;
 
     public LogicDebugDialog(){
         super(Core.bundle.get("ui.debug.title"));
@@ -77,13 +81,45 @@ public class LogicDebugDialog extends BaseDialog{
 
             t.table(t2 -> {
                 t2.top().left();
-                t2.label(() -> Core.bundle.get("ui.debug.vars"));
-                t2.row();
-                t2.pane(Styles.defaultPane, p -> {
-                    p.setBackground(Styles.black5);
-                    varsTable = p.table().top().left().grow().get();
+                t2.table(vt -> {
+                    vt.label(() -> Core.bundle.get("ui.debug.vars"));
+                    vt.row();
+                    vt.pane(Styles.defaultPane, p -> {
+                        p.setBackground(Styles.black5);
+                        varsTable = p.table().top().left().grow().get();
+                    }).pad(5).top().left().grow();
                 }).pad(5).top().left().grow();
-            }).top().left().grow();
+
+                t2.row();
+                t2.table(bt -> {
+                    bt.label(() -> Core.bundle.get("ui.debug.breakpoints"));
+                    bt.row();
+                    bt.table(btt -> {
+                        btt.top().left();
+                        btt.setBackground(Styles.black5);
+                        btt.pane(p -> {
+                            bpTable = p.table().top().left().grow().get();
+                        }).top().left().grow();
+                    }).pad(5).top().left().grow();
+
+                    bt.row();
+                    bt.table(bf -> {
+                        bf.field("" + newBreakpoint, DebugStyles.codeField, s -> {
+                            if(Strings.canParseInt(s)){
+                                newBreakpoint = Math.max(Integer.parseInt(s.replaceAll("[^\\d]", "")), 0);
+                            }
+                        }).growX().top().left();
+
+                        bf.button(Icon.add, () -> {
+                            if(!build.breakpoints.contains(newBreakpoint)){
+                                build.breakpoints.add(newBreakpoint);
+                                updateBreakpoints();
+                            }
+                        }).top().right().size(40).pad(5);
+                    }).pad(5).top().left().growX();
+
+                }).pad(5).bottom().left().grow();
+            }).pad(5).top().left().grow();
         });
 
         addCloseButton();
@@ -92,7 +128,40 @@ public class LogicDebugDialog extends BaseDialog{
     @Override
     public void draw(){
         updateVars();
+
+        if(build.auto && build.breakpoints.contains(currentInstruction())){
+            build.auto = false;
+        };
+
         super.draw();
+    }
+
+    public void updateBreakpoints(){
+        bpTable.clearChildren();
+        bpTable.top().left();
+
+        for(int i = 0; i < build.breakpoints.size; i++){
+            int fi = i;
+            int bp = build.breakpoints.get(fi);
+            bpTable.table(t -> {
+                t.button(Icon.cancel, () -> {
+                    build.breakpoints.removeRange(fi, fi);
+                    updateBreakpoints();
+                }).tooltip("ui.debug.remove").top().left().size(40).pad(5);
+
+                Label l;
+                l = t.labelWrap(() -> bp + "").top().left().growY().width(100)
+                .get();
+                l.setAlignment(Align.left);
+                l.setStyle(DebugStyles.code);
+
+                l = t.labelWrap(() -> bp < code.length ? code[bp] : "-").top().left().grow()
+                .get();
+                l.setAlignment(Align.left);
+                l.setStyle(DebugStyles.code);
+            }).growX().top().left();
+            bpTable.row();
+        }
     }
 
     // TODO optimize
@@ -157,7 +226,7 @@ public class LogicDebugDialog extends BaseDialog{
     }
 
     public int currentInstruction(){
-        return (int)Mathf.clamp(executor.var(0).numval - 1, 0, Integer.MAX_VALUE);
+        return (int)Math.max(executor.var(0).numval, 0) % code.length;
     }
 
     public void show(String code, LExecutor executor, DebugLogicBuild build){
@@ -165,6 +234,7 @@ public class LogicDebugDialog extends BaseDialog{
         this.code = code.split("\\n");
         this.build = build;
 
+        updateBreakpoints();
         updateCode();
         show();
     }

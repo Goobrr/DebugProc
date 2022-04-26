@@ -9,12 +9,16 @@ import arc.freetype.FreetypeFontLoader.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.scene.ui.Label.*;
+import arc.scene.ui.TextField.*;
 import arc.struct.*;
 import mindustry.*;
+import mindustry.gen.*;
+import mindustry.ui.*;
 
 public class DebugStyles{
     public static LabelStyle code;
     public static Font codeFont;
+    public static TextFieldStyle codeField;
 
     public static void init(){
         Core.assets.setLoader(FreeTypeFontGenerator.class, new FreeTypeFontGeneratorLoader(Vars.tree){
@@ -48,6 +52,16 @@ public class DebugStyles{
         }})).loaded = f -> {
             codeFont = f;
             code = new LabelStyle(codeFont, Color.white);
+            codeField = new TextFieldStyle(){{
+                font = codeFont;
+                fontColor = Color.white;
+                disabledFontColor = Color.gray;
+                selection = Tex.selection;
+                invalidBackground = Tex.underlineRed;
+                cursor = Tex.cursor;
+                messageFont = codeFont;
+                messageFontColor = Color.gray;
+            }};
         };
 
     }
