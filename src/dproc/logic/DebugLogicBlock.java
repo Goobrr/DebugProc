@@ -17,7 +17,7 @@ public class DebugLogicBlock extends LogicBlock{
 
     public class DebugLogicBuild extends LogicBuild {
         public boolean auto = false;
-        public IntSeq breakpoints = new IntSeq();
+        public IntSet breakpoints = new IntSet();
 
         @Override
         public void buildConfiguration(Table table){
@@ -131,9 +131,7 @@ public class DebugLogicBlock extends LogicBlock{
             write.bool(auto);
 
             write.i(breakpoints.size);
-            for(int i = 0; i < breakpoints.size; i++){
-                write.i(breakpoints.get(i));
-            }
+            breakpoints.each(write::i);
         }
 
         @Override

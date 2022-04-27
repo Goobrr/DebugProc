@@ -31,8 +31,6 @@ public class LogicDebugDialog extends BaseDialog{
     private Table varsTable;
     private Element hovered;
 
-    private final IntMap<Integer> bpIndexes = new IntMap<>();
-
     public LogicDebugDialog(){
         super(Core.bundle.get("ui.debug.title"));
 
@@ -165,11 +163,10 @@ public class LogicDebugDialog extends BaseDialog{
             Table c = codeTable.add(new Table(t -> {
                 t.top().left();
                 ImageButton b = t.button(Icon.rightOpenSmall, Styles.emptyi, () -> {
-                    if(bpIndexes.containsKey(fi) && bpIndexes.get(fi) < build.breakpoints.size){
-                        build.breakpoints.removeIndex(bpIndexes.get(fi));
+                    if(build.breakpoints.contains(fi)){
+                        build.breakpoints.remove(fi);
                     }else{
                         build.breakpoints.add(fi);
-                        bpIndexes.put(fi, build.breakpoints.size - 1);
                     }
                 }).padLeft(5).left().size(20).tooltip(Core.bundle.get("ui.debug.breakpoint")).get();
                 b.visible(() -> hovered == t);
@@ -215,11 +212,6 @@ public class LogicDebugDialog extends BaseDialog{
         this.executor = executor;
         this.code = code.split("\\n");
         this.build = build;
-
-        bpIndexes.clear();
-        for(int i = 0; i < build.breakpoints.size; i++){
-            bpIndexes.put(build.breakpoints.get(i), i);
-        }
 
         updateCode();
         show();
