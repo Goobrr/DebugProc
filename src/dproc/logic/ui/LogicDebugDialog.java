@@ -188,7 +188,7 @@ public class LogicDebugDialog extends BaseDialog{
                     currentInstruction() == fi ? Pal.accent :
                     hovered == this ? Pal.gray : Color.clear
                     );
-                    Draw.alpha(0.7f);
+                    Draw.alpha(0.7f * this.parentAlpha);
                     Fill.crect(x, y, this.getWidth(), this.getHeight());
                 }
             }).top().left().growX().get();
