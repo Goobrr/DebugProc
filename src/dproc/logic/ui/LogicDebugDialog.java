@@ -1,10 +1,15 @@
 package dproc.logic.ui;
 
 import arc.*;
+import arc.graphics.*;
+import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.scene.*;
+import arc.scene.event.*;
 import arc.scene.ui.*;
 import arc.scene.ui.layout.*;
+import arc.scene.utils.*;
+import arc.struct.*;
 import arc.util.*;
 import dproc.logic.DebugLogicBlock.*;
 import mindustry.*;
@@ -24,9 +29,9 @@ public class LogicDebugDialog extends BaseDialog{
 
     private Table codeTable;
     private Table varsTable;
-    private Table bpTable;
+    private Element hovered;
 
-    private int newBreakpoint = 0;
+    private final IntMap<Integer> bpIndexes = new IntMap<>();
 
     public LogicDebugDialog(){
         super(Core.bundle.get("ui.debug.title"));
@@ -35,6 +40,7 @@ public class LogicDebugDialog extends BaseDialog{
             t.top().left();
             t.table(t1 -> {
                 t1.top().left();
+
                 t1.label(() -> Core.bundle.get("ui.debug.code"));
                 t1.row();
                 t1.pane(Styles.defaultPane, p -> {
@@ -42,6 +48,7 @@ public class LogicDebugDialog extends BaseDialog{
                     p.top().left();
                     codeTable = p.table().top().left().grow().get();
                 }).pad(5).top().left().grow().get().setScrollingDisabledX(false);
+
                 t1.row();
                 t1.table(b -> {
                     b.table(Styles.black5, bt -> {
@@ -89,36 +96,6 @@ public class LogicDebugDialog extends BaseDialog{
                         varsTable = p.table().top().left().grow().get();
                     }).pad(5).top().left().grow();
                 }).pad(5).top().left().grow();
-
-                t2.row();
-                t2.table(bt -> {
-                    bt.label(() -> Core.bundle.get("ui.debug.breakpoints"));
-                    bt.row();
-                    bt.table(btt -> {
-                        btt.top().left();
-                        btt.setBackground(Styles.black5);
-                        btt.pane(p -> {
-                            bpTable = p.table().top().left().grow().get();
-                        }).top().left().grow();
-                    }).pad(5).top().left().grow();
-
-                    bt.row();
-                    bt.table(bf -> {
-                        bf.field("" + newBreakpoint, DebugStyles.codeField, s -> {
-                            if(Strings.canParseInt(s)){
-                                newBreakpoint = Math.max(Integer.parseInt(s.replaceAll("[^\\d]", "")), 0);
-                            }
-                        }).growX().top().left();
-
-                        bf.button(Icon.add, () -> {
-                            if(!build.breakpoints.contains(newBreakpoint)){
-                                build.breakpoints.add(newBreakpoint);
-                                updateBreakpoints();
-                            }
-                        }).top().right().size(40).pad(5);
-                    }).pad(5).top().left().growX();
-
-                }).pad(5).bottom().left().grow();
             }).pad(5).top().left().grow();
         });
 
@@ -126,42 +103,14 @@ public class LogicDebugDialog extends BaseDialog{
     }
 
     @Override
-    public void draw(){
+    public void act(float delta){
         updateVars();
 
         if(build.auto && build.breakpoints.contains(currentInstruction())){
             build.auto = false;
         };
 
-        super.draw();
-    }
-
-    public void updateBreakpoints(){
-        bpTable.clearChildren();
-        bpTable.top().left();
-
-        for(int i = 0; i < build.breakpoints.size; i++){
-            int fi = i;
-            int bp = build.breakpoints.get(fi);
-            bpTable.table(t -> {
-                t.button(Icon.cancel, () -> {
-                    build.breakpoints.removeRange(fi, fi);
-                    updateBreakpoints();
-                }).tooltip("ui.debug.remove").top().left().size(40).pad(5);
-
-                Label l;
-                l = t.labelWrap(() -> bp + "").top().left().growY().width(100)
-                .get();
-                l.setAlignment(Align.left);
-                l.setStyle(DebugStyles.code);
-
-                l = t.labelWrap(() -> bp < code.length ? code[bp] : "-").top().left().grow()
-                .get();
-                l.setAlignment(Align.left);
-                l.setStyle(DebugStyles.code);
-            }).growX().top().left();
-            bpTable.row();
-        }
+        super.act(delta);
     }
 
     // TODO optimize
@@ -213,14 +162,47 @@ public class LogicDebugDialog extends BaseDialog{
                 lineNumber.append(" ");
             }
 
-            Image im = new Image(Tex.whiteui);
-            Label l = new Label(lineNumber + code[i], DebugStyles.code);
+            Table c = codeTable.add(new Table(t -> {
+                t.top().left();
+                ImageButton b = t.button(Icon.rightOpenSmall, Styles.emptyi, () -> {
+                    if(bpIndexes.containsKey(fi) && bpIndexes.get(fi) < build.breakpoints.size){
+                        build.breakpoints.removeIndex(bpIndexes.get(fi));
+                    }else{
+                        build.breakpoints.add(fi);
+                        bpIndexes.put(fi, build.breakpoints.size - 1);
+                    }
+                }).padLeft(5).left().size(20).tooltip(Core.bundle.get("ui.debug.breakpoint")).get();
+                b.visible(() -> hovered == t);
 
-            l.setWrap(true);
-            im.visible(() -> currentInstruction() == fi);
-            im.setColor(Pal.accent);
+                Label l = new Label(lineNumber + code[fi], DebugStyles.code);
+                l.setWrap(true);
+                l.setAlignment(Align.left);
 
-            codeTable.stack(im, l).top().left().growX();
+                t.add(l).top().left().padLeft(5);
+            }){
+                @Override
+                protected void drawBackground(float x, float y){
+                    Draw.color(
+                    build.breakpoints.contains(fi) ?
+                    currentInstruction() == fi ? Pal.heal : Color.sky :
+                    currentInstruction() == fi ? Pal.accent :
+                    hovered == this ? Pal.gray : Color.clear
+                    );
+                    Draw.alpha(0.7f);
+                    Fill.crect(x, y, this.getWidth(), this.getHeight());
+                }
+            }).top().left().growX().get();
+            c.touchable(() -> Touchable.enabled);
+            c.addListener(new InputListener(){
+                @Override
+                public void enter(InputEvent event, float x, float y, int pointer, Element fromActor){
+                    hovered = c;
+                }
+                @Override
+                public void exit(InputEvent event, float x, float y, int pointer, Element toActor){
+                    hovered = null;
+                }
+            });
             codeTable.row();
         }
     }
@@ -234,7 +216,11 @@ public class LogicDebugDialog extends BaseDialog{
         this.code = code.split("\\n");
         this.build = build;
 
-        updateBreakpoints();
+        bpIndexes.clear();
+        for(int i = 0; i < build.breakpoints.size; i++){
+            bpIndexes.put(build.breakpoints.get(i), i);
+        }
+
         updateCode();
         show();
     }
