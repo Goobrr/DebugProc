@@ -1,5 +1,9 @@
 package dproc.logic;
 
+import arc.*;
+import arc.graphics.*;
+import arc.graphics.g2d.*;
+import arc.math.*;
 import arc.scene.ui.layout.*;
 import arc.struct.*;
 import arc.util.*;
@@ -7,17 +11,76 @@ import arc.util.io.*;
 import dproc.*;
 import mindustry.*;
 import mindustry.gen.*;
+import mindustry.graphics.*;
 import mindustry.ui.*;
 import mindustry.world.blocks.logic.*;
 
+import java.nio.*;
+import java.util.*;
+
 public class DebugLogicBlock extends LogicBlock{
+    public TextureRegion shineRegion;
+
     public DebugLogicBlock(String name){
         super(name);
+
+        // TODO remove unnecessary wrapper?
+        config(byte[].class, (DebugLogicBuild l, byte[] b) -> {
+            ByteBufferInput buffer = new ByteBufferInput(ByteBuffer.wrap(b));
+
+            l.auto = buffer.readBoolean();
+            int len = buffer.readInt();
+
+            byte[] data = new byte[len];
+            for(int i = 0; i < len; i++){
+                data[i] = buffer.readByte();
+            }
+            l.readCompressed(data, true);
+
+            while(buffer.buffer.hasRemaining()){
+                l.breakpoints.add(buffer.readInt());
+            }
+        });
+    }
+
+    @Override
+    public void load(){
+        super.load();
+
+        shineRegion = Core.atlas.find(name + "-shine");
     }
 
     public class DebugLogicBuild extends LogicBuild {
         public boolean auto = false;
         public IntSet breakpoints = new IntSet();
+
+        // TODO compress?
+        @Override
+        public byte[] config(){
+            byte[] pd = compress(code, relativeConnections());
+
+            ByteBufferOutput buffer = new ByteBufferOutput(ByteBuffer.wrap(new byte[5 + pd.length + (breakpoints.size * 4)]));
+
+            buffer.writeBoolean(auto);
+            buffer.writeInt(pd.length);
+            buffer.write(pd);
+            breakpoints.each(buffer::writeInt);
+
+            return buffer.buffer.array();
+        }
+
+        @Override
+        public void draw(){
+            super.draw();
+
+            if(auto){
+                Draw.color(Pal.logicBlocks, (Mathf.sin((Time.time / 50) - x - y) + 1f) / 4f);
+
+                Draw.blend(Blending.additive);
+                Draw.rect(shineRegion, x, y);
+                Draw.blend();
+            }
+        }
 
         @Override
         public void buildConfiguration(Table table){
