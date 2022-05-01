@@ -26,19 +26,24 @@ public class DebugLogicBlock extends LogicBlock{
 
         // TODO remove unnecessary wrapper?
         config(byte[].class, (DebugLogicBuild l, byte[] b) -> {
-            ByteBufferInput buffer = new ByteBufferInput(ByteBuffer.wrap(b));
+            if(b[0] > 0){
+                ByteBufferInput buffer = new ByteBufferInput(ByteBuffer.wrap(b));
 
-            l.auto = buffer.readBoolean();
-            int len = buffer.readInt();
+                buffer.buffer.position(1);
+                l.auto = buffer.readBoolean();
+                int len = buffer.readInt();
 
-            byte[] data = new byte[len];
-            for(int i = 0; i < len; i++){
-                data[i] = buffer.readByte();
-            }
-            l.readCompressed(data, true);
+                byte[] data = new byte[len];
+                for(int i = 0; i < len; i++){
+                    data[i] = buffer.readByte();
+                }
+                l.readCompressed(data, true);
 
-            while(buffer.buffer.hasRemaining()){
-                l.breakpoints.add(buffer.readInt());
+                while(buffer.buffer.hasRemaining()){
+                    l.breakpoints.add(buffer.readInt());
+                }
+            }else{
+                l.readCompressed(Arrays.copyOfRange(b, 1, b.length), true);
             }
         });
     }
@@ -57,16 +62,28 @@ public class DebugLogicBlock extends LogicBlock{
         // TODO compress?
         @Override
         public byte[] config(){
-            byte[] pd = compress(code, relativeConnections());
+            return config(code, true);
+        }
 
-            ByteBufferOutput buffer = new ByteBufferOutput(ByteBuffer.wrap(new byte[5 + pd.length + (breakpoints.size * 4)]));
+        public byte[] config(String code, boolean b){
+            if(b){
+                byte[] pd = compress(code, relativeConnections());
 
-            buffer.writeBoolean(auto);
-            buffer.writeInt(pd.length);
-            buffer.write(pd);
-            breakpoints.each(buffer::writeInt);
+                ByteBufferOutput buffer = new ByteBufferOutput(ByteBuffer.wrap(new byte[6 + pd.length + (breakpoints.size * 4)]));
 
-            return buffer.buffer.array();
+                buffer.writeBoolean(true); // long form config flag
+                buffer.writeBoolean(auto);
+                buffer.writeInt(pd.length);
+                buffer.write(pd);
+                breakpoints.each(buffer::writeInt);
+
+                return buffer.buffer.array();
+            }else{
+                ByteSeq data = ByteSeq.with((byte)0); // short form config flag
+                data.addAll(compress(code, relativeConnections()));
+
+                return data.toArray();
+            }
         }
 
         @Override
@@ -85,7 +102,7 @@ public class DebugLogicBlock extends LogicBlock{
         @Override
         public void buildConfiguration(Table table){
             table.button(Icon.pencil, Styles.clearTransi, () -> {
-                Vars.ui.logic.show(code, executor, code -> configure(compress(code, relativeConnections())));
+                Vars.ui.logic.show(code, executor, code -> configure(config(code, false)));
             }).size(40);
 
             table.button(Icon.settings, Styles.clearTransi, () -> {
